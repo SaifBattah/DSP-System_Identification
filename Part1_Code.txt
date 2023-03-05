@@ -1,0 +1,366 @@
+clc;
+clear;
+close all;
+%% A) Generating x[n] 
+N = 2000;  % Number of Samples
+n = 0:1:N-1; 
+x = cos(0.03*pi*n);  %Input Signal
+
+
+%% A, C) Plotting x[n] and its spectrum
+fs = 1/N;
+f = linspace(-N*fs/2, N*fs/2, length(x));  % Frequency Vector to plot 
+%Obtaining Fourier Transform for x[n]. 
+M = fftshift(fft(x))./ length(x);
+%Plotting the x[n] signal and its magnitude and phase spectrum.
+figure(1);
+subplot(3,1,1);
+stem(n, x);
+title ('x[n] signal');
+xlabel('n');ylabel('x[n]'); xlim([0 200]);
+subplot(3,1,2);
+plot(f,abs(M));
+title ('Magnitude Spectrum of the signal M(jw)'); xlabel('Frequency(Hz)');ylabel('Amplitude(V)'); 
+subplot(3,1,3);
+plot(f,(angle(M).*(180/pi)));
+title ('Phase Spectrum of the signal M(jw)'); xlabel('Frequency(Hz)');ylabel('Angle(deg)');
+
+
+%% B) Plot the response of the FIR Filter
+filter1 = [1, -2, 4]; %3 taps FIR Filter
+figure(2);
+freqz(filter1,1); title('Frequency Response of the FIR Filter');
+
+%% D) LMS Algorithm
+d = filter(filter1, 1, x);  % Applying the FIR Filter to obtain d[n]
+M = 4;
+w = zeros(1,M);  % weights that will be updated in each iteration
+wi = zeros(1,M); % Intial Weights
+e = [];  %Error
+mu = 0.01;
+
+% LMS Algorithm
+for i = M:N
+    e(i) = d(i) - wi* x(i:-1:i-M+1)';
+    w = wi + 2*mu*e(i)*x(i:-1:i-M+1);
+    wi = w;
+    J(i) = (e(i))^2;
+    Jlog(i) = 10*log(J(i));
+end
+
+% Plot the requested Signals (e, J);
+figure(3);
+subplot(3, 1, 1), plot(e); grid; title('Error Signal'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J); grid; title('J vs Iteration Step'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog); title('J Log vs Iteration Step'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+%% E) Frequency Response of the obtained Filter
+figure(4);
+freqz(w,1);
+title('Frequency Response of the obtained LMS Filter');
+
+figure(5);
+freqz(filter1,1); title('Frequency Response of the FIR Filter');
+% They have the same phase respone.
+
+%% Trying the built in function of the DSP toolbox to make sure that the results are correct
+%mu = 0.01;
+%lms = dsp.LMSFilter(4, 'StepSize', mu, 'WeightsOutputPort', true);
+%[yy, err, w1] = step(lms, x', d');
+
+% Frequency Response of the obtained Filter using the built in function
+%figure(6);
+%freqz(w1,1);
+%title('Frequency Response of the obtained LMS Filter using Built In Funciton');
+
+% Plot the error Signal using the built in function
+%figure(7);
+%plot(err); grid; title('Error Signal using Built In Funciton'); xlabel('Iteration');ylabel('Error e(n)'); 
+
+%% F) LMS Algorithm Decreasing mu value
+
+w1 = zeros(1,M);  % weights that will be updated in each iteration
+wi1 = zeros(1,M); % Intial Weights
+e1 = [];  %Error
+mu1 = 0.0001;
+
+% LMS Algorithm
+for i = M:N
+    e1(i) = d(i) - wi1* x(i:-1:i-M+1)';
+    w1 = wi1 + 2*mu1*e1(i)*x(i:-1:i-M+1);
+    wi1 = w1;
+    J1(i) = (e1(i))^2;
+    Jlog1(i) = 10*log(J1(i));
+end
+
+% Plot the requested Signals (e, J);
+figure(8);
+subplot(3, 1, 1), plot(e1); grid; title('Error Signal mu = 0.0001'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J1); grid; title('J vs Iteration Step mu = 0.0001'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog1); title('J Log vs Iteration Step mu = 0.0001'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+
+figure(9);
+freqz(w1,1);
+title('Frequency Response of the obtained LMS Filter mu = 0.0001');
+
+figure(10);
+freqz(w,1); title('Frequency Response of the obtained LMS Filter mu = 0.01');
+% They have the similar Frequency respone.
+% Actually, deceasing the mu value will slower the learning rate which in
+% turn increase the steady state error as shown in the error signal figure.
+
+%% G) Add 40dB Noise using awgn to x[n]
+xn = x;
+x = awgn(xn, 40);
+
+% A, C) Plotting x[n] and its spectrum
+fs = 1/N;
+f = linspace(-N*fs/2, N*fs/2, length(x));  % Frequency Vector to plot 
+%Obtaining Fourier Transform for both x[n] signals. 
+M = fftshift(fft(x))./ length(x);
+%Plotting the x[n] signal and its magnitude and phase spectrum.
+figure(11);
+subplot(3,1,1);
+stem(n, x);
+title ('x[n] signal');
+xlabel('n');ylabel('x[n]'); xlim([0 200]);
+subplot(3,1,2);
+plot(f,abs(M));
+title ('Magnitude Spectrum of the signal M(jw)'); xlabel('Frequency(Hz)');ylabel('Amplitude(V)'); 
+subplot(3,1,3);
+plot(f,(angle(M).*(180/pi)));
+title ('Phase Spectrum of the signal M(jw)'); xlabel('Frequency(Hz)');ylabel('Angle(deg)');
+
+
+
+% D) LMS Algorithm
+d = filter(filter1, 1, x);  % Applying the FIR Filter to obtain d[n]
+M = 4;
+w = zeros(1,M);  % weights that will be updated in each iteration
+wi = zeros(1,M); % Intial Weights
+e = [];  %Error
+mu = 0.01;
+
+% LMS Algorithm
+for i = M:N
+    e(i) = d(i) - wi* x(i:-1:i-M+1)';
+    w = wi + 2*mu*e(i)*x(i:-1:i-M+1);
+    wi = w;
+    J(i) = (e(i))^2;
+    Jlog(i) = 10*log(J(i));
+end
+
+% Plot the requested Signals (e, J);
+figure(12);
+subplot(3, 1, 1), plot(e); grid; title('Error Signal'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J); grid; title('J vs Iteration Step'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog); title('J Log vs Iteration Step'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+% E) Frequency Response of the obtained Filter
+figure(13);
+freqz(w,1);
+title('Frequency Response of the obtained LMS Filter');
+
+figure(14);
+freqz(filter1,1); title('Frequency Response of the FIR Filter');
+% They have the same phase respone.
+
+% F) LMS Algorithm Decreasing mu value
+
+w1 = zeros(1,M);  % weights that will be updated in each iteration
+wi1 = zeros(1,M); % Intial Weights
+e1 = [];  %Error
+mu1 = 0.0001;
+
+% LMS Algorithm
+for i = M:N
+    e1(i) = d(i) - wi1* x(i:-1:i-M+1)';
+    w1 = wi1 + 2*mu1*e1(i)*x(i:-1:i-M+1);
+    wi1 = w1;
+    J1(i) = (e1(i))^2;
+    Jlog1(i) = 10*log(J1(i));
+end
+
+% Plot the requested Signals (e, J);
+figure(15);
+subplot(3, 1, 1), plot(e1); grid; title('Error Signal mu = 0.0001'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J1); grid; title('J vs Iteration Step mu = 0.0001'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog1); title('J Log vs Iteration Step mu = 0.0001'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+
+figure(16);
+freqz(w1,1);
+title('Frequency Response of the obtained LMS Filter mu = 0.0001');
+
+figure(16);
+freqz(w,1); title('Frequency Response of the obtained LMS Filter mu = 0.01');
+% They have the similar Frequency respone.
+% Actually, adding awgn leads to an increase in the error and the steady state error as well as shown in the error signal figure.
+
+%% H) Add 30dB Noise using awgn to x[n]
+x = awgn(xn, 30);
+
+% A, C) Plotting x[n] and its spectrum
+fs = 1/N;
+f = linspace(-N*fs/2, N*fs/2, length(x));  % Frequency Vector to plot 
+%Obtaining Fourier Transform for both x[n] signals. 
+M = fftshift(fft(x))./ length(x);
+%Plotting the x[n] signal and its magnitude and phase spectrum.
+figure(17);
+subplot(3,1,1);
+stem(n, x);
+title ('x[n] signal');
+xlabel('n');ylabel('x[n]'); xlim([0 200]);
+subplot(3,1,2);
+plot(f,abs(M));
+title ('Magnitude Spectrum of the signal M(jw)'); xlabel('Frequency(Hz)');ylabel('Amplitude(V)'); 
+subplot(3,1,3);
+plot(f,(angle(M).*(180/pi)));
+title ('Phase Spectrum of the signal M(jw)'); xlabel('Frequency(Hz)');ylabel('Angle(deg)');
+
+
+
+% D) LMS Algorithm
+d = filter(filter1, 1, x);  % Applying the FIR Filter to obtain d[n]
+M = 4;
+w = zeros(1,M);  % weights that will be updated in each iteration
+wi = zeros(1,M); % Intial Weights
+e = [];  %Error
+mu = 0.01;
+
+% LMS Algorithm
+for i = M:N
+    e(i) = d(i) - wi* x(i:-1:i-M+1)';
+    w = wi + 2*mu*e(i)*x(i:-1:i-M+1);
+    wi = w;
+    J(i) = (e(i))^2;
+    Jlog(i) = 10*log(J(i));
+end
+
+% Plot the requested Signals (e, J);
+figure(18);
+subplot(3, 1, 1), plot(e); grid; title('Error Signal'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J); grid; title('J vs Iteration Step'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog); title('J Log vs Iteration Step'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+% E) Frequency Response of the obtained Filter
+figure(19);
+freqz(w,1);
+title('Frequency Response of the obtained LMS Filter');
+
+figure(20);
+freqz(filter1,1); title('Frequency Response of the FIR Filter');
+% They have the same phase respone.
+
+% F) LMS Algorithm Decreasing mu value
+
+w1 = zeros(1,M);  % weights that will be updated in each iteration
+wi1 = zeros(1,M); % Intial Weights
+e1 = [];  %Error
+mu1 = 0.0001;
+
+% LMS Algorithm
+for i = M:N
+    e1(i) = d(i) - wi1* x(i:-1:i-M+1)';
+    w1 = wi1 + 2*mu1*e1(i)*x(i:-1:i-M+1);
+    wi1 = w1;
+    J1(i) = (e1(i))^2;
+    Jlog1(i) = 10*log(J1(i));
+end
+
+% Plot the requested Signals (e, J);
+figure(21);
+subplot(3, 1, 1), plot(e1); grid; title('Error Signal mu = 0.0001'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J1); grid; title('J vs Iteration Step mu = 0.0001'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog1); title('J Log vs Iteration Step mu = 0.0001'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+
+figure(22);
+freqz(w1,1);
+title('Frequency Response of the obtained LMS Filter mu = 0.0001');
+
+figure(23);
+freqz(w,1); title('Frequency Response of the obtained LMS Filter mu = 0.01');
+% They have the similar Frequency respone.
+% Actually, adding awgn leads to an increase in the error and the steady state error as well as shown in the error signal figure.
+
+
+%% Ensemble Averaging
+x = awgn(xn, 30);
+
+% D) LMS Algorithm
+d = filter(filter1, 1, x);  % Applying the FIR Filter to obtain d[n]
+M = 4;
+w = zeros(1000,M);  % weights that will be updated in each iteration
+wi = zeros(1000,M); % Intial Weights
+e = [];  %Error
+mu = 0.01;
+
+% LMS Algorithm
+for k = 1:1:1000
+    for i = M:N
+    e(k,i) = d(i) - wi(k,:)* x(i:-1:i-M+1)';
+    w(k,:) = wi(k,:) + 2*mu*e(k,i)*x(i:-1:i-M+1);
+    wi = w;
+    end  
+end
+
+% Averaging 
+e = mean(e);
+w = mean(w);
+J = e.^2;
+Jlog = 10*log(J);
+
+% Plot the requested Signals (e, J);
+figure(24);
+subplot(3, 1, 1), plot(e); grid; title('Error Signal'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J); grid; title('J vs Iteration Step'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog); title('J Log vs Iteration Step'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+% E) Frequency Response of the obtained Filter
+figure(25);
+freqz(w,1);
+title('Frequency Response of the obtained LMS Filter');
+
+figure(26);
+freqz(filter1,1); title('Frequency Response of the FIR Filter');
+% The steady state error is smaller 
+
+
+% F) LMS Algorithm Decreasing mu value
+w1 = zeros(1000,M);  % weights that will be updated in each iteration
+wi1 = zeros(1000,M); % Intial Weights
+e1 = [];  %Error
+mu1 = 0.0001;
+
+% LMS Algorithm
+for k = 1:1:1000
+    for i = M:N
+    e1(k,i) = d(i) - wi1(k,:)* x(i:-1:i-M+1)';
+    w1(k,:) = wi1(k,:) + 2*mu1*e1(k,i)*x(i:-1:i-M+1);
+    wi1 = w1;
+    end  
+end
+
+% Averaging 
+e1 = mean(e1);
+w1 = mean(w1);
+J1 = e1.^2;
+Jlog1 = 10*log(J1);
+
+% Plot the requested Signals (e, J);
+figure(27);
+subplot(3, 1, 1), plot(e1); grid; title('Error Signal mu = 0.0001'); xlabel('Iteration');ylabel('Error e(n)'); 
+subplot(3,1,2), plot(J1); grid; title('J vs Iteration Step mu = 0.0001'); xlabel('Iteration');ylabel('J(n)');
+subplot(3,1,3), plot(Jlog1); title('J Log vs Iteration Step mu = 0.0001'); grid; xlabel('Iteration');ylabel('10*log(J(i))');
+
+
+figure(28);
+freqz(w1,1);
+title('Frequency Response of the obtained LMS Filter mu = 0.0001');
+
+figure(29);
+freqz(w,1); title('Frequency Response of the obtained LMS Filter mu = 0.01');
+% They have the similar Frequency respone.
+% Actually, adding awgn leads to an increase in the error and the steady state error as well as shown in the error signal figure.
